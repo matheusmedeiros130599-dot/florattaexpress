@@ -24,8 +24,8 @@ if (fs.existsSync(envPath)) {
     }
   });
 }
-const ZUCKPAY_CLIENT_ID = dotenv.ZUCKPAY_CLIENT_ID || 'matheusmedeiros130599_2781149172';
-const ZUCKPAY_CLIENT_SECRET = dotenv.ZUCKPAY_CLIENT_SECRET || 'e2df3cd0c85ea4570627bb3699c57245281de3ecafe195e59a90f747a86ec7d3';
+const ZUCKPAY_CLIENT_ID = process.env.ZUCKPAY_CLIENT_ID || dotenv.ZUCKPAY_CLIENT_ID || 'matheusmedeiros130599_2781149172';
+const ZUCKPAY_CLIENT_SECRET = process.env.ZUCKPAY_CLIENT_SECRET || dotenv.ZUCKPAY_CLIENT_SECRET || 'e2df3cd0c85ea4570627bb3699c57245281de3ecafe195e59a90f747a86ec7d3';
 
 const MIME_TYPES = {
   '.html': 'text/html; charset=utf-8',
