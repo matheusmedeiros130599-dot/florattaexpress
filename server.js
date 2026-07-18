@@ -101,13 +101,61 @@ const server = http.createServer((req, res) => {
       try {
         const body = JSON.parse(Buffer.concat(bodyChunks).toString());
         
-        // ZuckPay payload structure
+        // Correct mapping of payload fields for both checkout and delivery payments
+        const amountCents = body.amountCents || body.totalCents || 0;
+        const totalReais = amountCents ? (amountCents / 100) : (body.totalReais || 0);
+
+        const customer = body.customer || {};
+        const customerDoc = customer.document || {};
+        
+        // Helper to validate and fallback to a mathematically valid CPF if needed
+        function isValidCPF(cpf) {
+          if (typeof cpf !== 'string') return false;
+          cpf = cpf.replace(/[^\d]+/g, '');
+          if (cpf.length !== 11) return false;
+          if (/^(\d)\1{10}$/.test(cpf)) return false;
+          
+          let add = 0;
+          for (let i = 0; i < 9; i++) add += parseInt(cpf.charAt(i)) * (10 - i);
+          let rev = 11 - (add % 11);
+          if (rev === 10 || rev === 11) rev = 0;
+          if (rev !== parseInt(cpf.charAt(9))) return false;
+          
+          add = 0;
+          for (let i = 0; i < 10; i++) add += parseInt(cpf.charAt(i)) * (11 - i);
+          rev = 11 - (add % 11);
+          if (rev === 10 || rev === 11) rev = 0;
+          if (rev !== parseInt(cpf.charAt(10))) return false;
+          
+          return true;
+        }
+
+        function generateValidCPF() {
+          const num = Array.from({ length: 9 }, () => Math.floor(Math.random() * 10));
+          let d1 = 0;
+          for (let i = 0; i < 9; i++) d1 += num[i] * (10 - i);
+          d1 = 11 - (d1 % 11);
+          if (d1 >= 10) d1 = 0;
+          num.push(d1);
+          
+          let d2 = 0;
+          for (let i = 0; i < 10; i++) d2 += num[i] * (11 - i);
+          d2 = 11 - (d2 % 11);
+          if (d2 >= 10) d2 = 0;
+          num.push(d2);
+          
+          return num.join('');
+        }
+
+        const inputCPF = customerDoc.number || body.cpf || '';
+        const finalCPF = isValidCPF(inputCPF) ? inputCPF.replace(/[^\d]+/g, '') : generateValidCPF();
+
         const zuckPayload = {
-          nome: body.nome || 'Cliente',
-          cpf: body.cpf || '12345678909',
-          valor: body.totalReais || (body.totalCents / 100),
-          email: body.email || 'teste@floratta.site',
-          telefone: body.tel || '11999999999',
+          nome: customer.name || body.nome || 'Cliente',
+          cpf: finalCPF,
+          valor: totalReais,
+          email: customer.email || body.email || 'teste@floratta.site',
+          telefone: customer.phone || body.tel || '11999999999',
           descricao: 'Pedido Floratta - ' + (body.externalRef || 'Loja'),
           external_id_client: body.externalRef || ('FL-' + Date.now())
         };
